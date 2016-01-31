@@ -150,7 +150,9 @@ public class Window {
 			inserted = false;
 		}
 		// br.close();
-		System.out.println("size = " + size);
+		LOG.info("size = " + size);
+		LOG.info("Number of Children for RootNode: " + rootNodes.get(0).getChildren().size());
+//		System.out.println("size = " + size);
 
 		return this.rootNodes;
 	}
@@ -178,6 +180,7 @@ public class Window {
 					newChildNode.addChildNode(child);
 					LOG.debug("linked child " + child.getName() + " to node " + newChildNode.getName());
 				}
+				size--;
 				rootToDelete = root;
 			}
 		}

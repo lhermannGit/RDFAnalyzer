@@ -8,6 +8,9 @@ import java.sql.Statement;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import treeGeneration.ChildNode;
 import treeGeneration.Node;
 import treeGeneration.RootNode;
@@ -24,99 +27,34 @@ import treeGeneration.RootNode;
  */
 
 public class Database {
-
-	// JDBC driver name and database URL
-	// static final String JDBC_DRIVER = "com.mysql.jdbc.Driver";
-	static String DB_URL = "jdbc:mysql://localhost:3306/datamining";
-	// database credentials
-	static String dbName = "datamining";
-	static String user = "root";
-	static String password = "root";// ""root
+	
+	
+	public final static Database INSTANCE = new Database();
+	Logger LOG = LogManager.getLogger(Database.class.getName());
+	
+	DBConnectionInfo dbConfig = null;
+	
 	private Connection connection;
 	private Statement stmt;
-	private int bagid;
 	private int crawlid = 0;
-	static String tableName = "subtree_path";
 
-	public Database(RootNode rootNode) {
-		// initialize
-
-		// commented because you need to have the config.properties file
-		// MySQLConnectionInfo config = new MySQLConnectionInfo();
-		// dbName=config.getDatabaseName();
-		// user=config.getUser();
-		// password=config.getPassword();
-		// TODO Add DB_URL in config.properties
-
-		// connect to the database
+	private Database(){
+		dbConfig = new DBConnectionInfo();
 		try {
-			connection = DriverManager.getConnection(DB_URL, user, password);
+			connection = DriverManager.getConnection(dbConfig.DB_URL, dbConfig.user, dbConfig.password);
 			stmt = connection.createStatement();
 
 			// create two tables (one with RDF triples another with graph
 			// structure)
-			this.createTables(tableName);
+			this.createTables(dbConfig.subtrees);
 
-			if (rootNode != null) {
-				bagid = rootNode.bagID;
-				this.serializeTree(rootNode);
-			}
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
-
-	// checks if a database table exists
-	private boolean tableExists(String tableName) throws SQLException {
-		String str = "SELECT * FROM information_schema.tables " + "WHERE table_schema = '" + dbName
-				+ "' AND table_name = '" + tableName + "' " + "LIMIT 1;";
-		ResultSet res = this.stmt.executeQuery(str);
-
-		// get number of rows
-		res.last();
-
-		return res.getRow() > 0;
-	}
-
-	// creates necessary tables
-	private void createTables(String tableName) throws SQLException {
-		String sqlString;
-		if (!tableExists("Crawls")) {
-			sqlString = "CREATE TABLE Crawls " + " (CrawlID INT NOT NULL AUTO_INCREMENT,"
-					+ " Name VARCHAR(255) NOT NULL," + " PRIMARY KEY (CrawlID) );";
-			stmt.executeUpdate(sqlString);
-			System.out.println("Table Crawls was created.");
-		} else
-			System.out.println("No need to create table Crawls (already exists).");
-
-		if (!tableExists("Trees")) {
-			sqlString = "CREATE TABLE Trees " + " (Id INT NOT NULL AUTO_INCREMENT," + " TreeID INT NOT NULL,"
-					+ " BagID INT NULL," + " Current INT NOT NULL," + " Predicate INT NULL," + " Child_No INT NULL,"
-					+ " PRIMARY KEY (ID) );";
-			stmt.executeUpdate(sqlString);
-			System.out.println("Table Trees is created!");
-		} else {
-			System.out.println("You tried to create table Trees that already exist.");
-		}
-
-		if (!tableExists(tableName)) {
-			sqlString = "CREATE TABLE " + tableName + " " + " (Id INT NOT NULL AUTO_INCREMENT," + " Crawl INT NULL,"
-					+ " Bag INT NULL," + " StartLvl INT NOT NULL," + " EndLvl INT NOT NULL,"
-					+ " Path VARCHAR(255) NOT NULL," + " PRIMARY KEY (Id) "
-					// + ", FOREIGN KEY (Crawl) REFERENCES Crawls (CrawlID) "
-					+ ");";
-			stmt.executeUpdate(sqlString);
-			System.out.println("Table " + tableName + " is created!");
-		} else
-			System.out.println("No need to create table " + tableName + " (already exists).");
-
-	}
-
-	public void serializeTree(RootNode rootNode) {
-
-		/// get the tree according to the rootNode
-
+	
+	public void serialize(RootNode rootNode){
 		LinkedList<Node> queueNodes = new LinkedList<Node>();
 		if (rootNode != null) {
 			queueNodes.add(rootNode);
@@ -150,20 +88,13 @@ public class Database {
 								try {
 
 									String SqlString = "INSERT INTO Trees (TreeID, BagID, Current, Predicate, Child_No) VALUES("
-											+ treeID + " ," + bagid + "," + currentnode.getName() + ","
+											+ treeID + " ," + rootNode.bagID + "," + currentnode.getName() + ","
 											+ children.get(n).getPredicate() + "," + children.get(n).getName() + ");";
 									this.stmt.executeUpdate(SqlString);
 								} catch (SQLException e) {
-									// TODO Auto-generated catch block
-									System.out.println(
-											"Cannot save current_node,predicate,child_node into Table Trees!!");
+									LOG.error("Cannot save current_node,predicate,child_node into Table Trees!!");
 									e.printStackTrace();
 								}
-								/*
-								 * if (queueNodes.getFirst()==children.get(0))
-								 * {parentnode=currentnode; lvl+=1;} else if ()
-								 * {}
-								 */
 							}
 						}
 					visited.add(currentnode);
@@ -173,13 +104,59 @@ public class Database {
 				e.printStackTrace();
 			}
 		}
+	}
+
+
+	// checks if a database table exists
+	private boolean tableExists(String tableName) throws SQLException {
+		String str = "SELECT * FROM information_schema.tables " + "WHERE table_schema = '" + dbConfig.dbName
+				+ "' AND table_name = '" + tableName + "' " + "LIMIT 1;";
+		ResultSet res = this.stmt.executeQuery(str);
+
+		// get number of rows
+		res.last();
+
+		return res.getRow() > 0;
+	}
+
+	// creates necessary tables
+	private void createTables(String tableName) throws SQLException {
+		String sqlString;
+		if (!tableExists("Crawls")) {
+			sqlString = "CREATE TABLE Crawls " + " (CrawlID INT NOT NULL AUTO_INCREMENT,"
+					+ " Name VARCHAR(255) NOT NULL," + " PRIMARY KEY (CrawlID) );";
+			stmt.executeUpdate(sqlString);
+			LOG.info("Table Crawls was created.");
+		} else
+			LOG.info("No need to create table Crawls (already exists).");
+
+		if (!tableExists("Trees")) {
+			sqlString = "CREATE TABLE Trees " + " (Id INT NOT NULL AUTO_INCREMENT," + " TreeID INT NOT NULL,"
+					+ " BagID INT NULL," + " Current INT NOT NULL," + " Predicate INT NULL," + " Child_No INT NULL,"
+					+ " PRIMARY KEY (ID) );";
+			stmt.executeUpdate(sqlString);
+			LOG.info("Table Trees is created!");
+		} else {
+			LOG.info("You tried to create table Trees that already exist.");
+		}
+
+		if (!tableExists(tableName)) {
+			sqlString = "CREATE TABLE " + tableName + " " + " (Id INT NOT NULL AUTO_INCREMENT," + " Crawl INT NULL,"
+					+ " Bag INT NULL," + " StartLvl INT NOT NULL," + " EndLvl INT NOT NULL,"
+					+ " Path VARCHAR(255) NOT NULL," + " PRIMARY KEY (Id) "
+					// + ", FOREIGN KEY (Crawl) REFERENCES Crawls (CrawlID) "
+					+ ");";
+			stmt.executeUpdate(sqlString);
+			LOG.info("Table " + tableName + " is created!");
+		} else
+			LOG.info("No need to create table " + tableName + " (already exists).");
 
 	}
 
 	// runs any query string on the database
 	public ResultSet query(String Pattern) {
 		ResultSet result = null;
-		System.out.println(Pattern);
+//		System.out.println(Pattern);
 		try {
 			result = this.stmt.executeQuery(Pattern);
 		} catch (Exception x) {
@@ -202,9 +179,9 @@ public class Database {
 	}
 
 	// inserts a subtree into the database
-	public boolean saveSubtree(int startLvl, int endLvl, String path) {
+	public boolean saveSubtree(int startLvl, int endLvl, String path, int bagID) {
 		ResultSet rs = this.query("INSERT INTO subtree_path (Crawl, Bag, StartLvl, EndLvl, Path) VALUES (" + crawlid
-				+ ", " + bagid + ", " + startLvl + ", " + endLvl + ", '" + path + "');");
+				+ ", " + bagID + ", " + startLvl + ", " + endLvl + ", '" + path + "');");
 		return rs != null;
 	}
 

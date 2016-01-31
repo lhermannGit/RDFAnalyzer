@@ -44,7 +44,7 @@ public class LookupCache {
 			this.table = prefix + "predicates";
 			break;
 		}
-		db.query("DROP TABLE " + this.table+";");
+		db.query("DROP TABLE IF EXISTS " + this.table+";");
 		db.query("CREATE TABLE " + this.table + " (k text, v int );");
 	}
 

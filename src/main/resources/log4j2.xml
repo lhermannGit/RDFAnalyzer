@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="error" name="App" packages="">
+    <appenders>
+        <!-- file appender -->
+        <RollingFile name="A1" fileName="logs/debug.log" append="true"
+            filePattern="logs/$${date:yyyy-MM}/app-%d{MM-dd-yyyy}-%i.log.gz">
+            <!-- log pattern -->
+            <PatternLayout pattern="%d{ABSOLUTE} %5p %c{1}:%L - %m%n" />
+
+            <!-- set file size policy -->
+            <Policies>
+                <TimeBasedTriggeringPolicy />
+                <SizeBasedTriggeringPolicy size="500 MB" />
+            </Policies>
+            <ThresholdFilter level="TRACE" onMatch="ACCEPT" onMismatch="DENY"/>
+        </RollingFile>
+        <!-- console appender -->
+        <Console name="STDOUT" target="SYSTEM_OUT">
+            <!-- log pattern -->
+            <PatternLayout pattern="%d{ABSOLUTE} %5p %c{1}:%L - %m%n" />
+                <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>
+        </Console>
+    </appenders>
+    <loggers>
+        <!-- the root category -->
+        <root level="debug">
+            <appender-ref ref="A1" />
+            <appender-ref ref="STDOUT" />
+        </root>
+    </loggers>
+</Configuration>

@@ -17,7 +17,7 @@ public class InputReduction {
 	LookupCache objects;
 
 	public InputReduction(int upperBound, String prefix) {
-		Database db = new Database(null);
+		Database db = Database.INSTANCE;
 		predicates = new LookupCache(upperBound, Table.predicates, prefix, db);
 		objects = new LookupCache(upperBound, Table.objects, prefix, db);
 	}

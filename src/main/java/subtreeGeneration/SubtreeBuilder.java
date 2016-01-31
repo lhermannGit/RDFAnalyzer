@@ -4,11 +4,16 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import util.Database;
 
 public class SubtreeBuilder {
 
-	private Database db;
+	Logger LOG = LogManager.getLogger(this.getClass().getName());
+	private Database db = Database.INSTANCE;
+	int bagID;
 	
 	// subpattern of regular expression for nested int & parenthesis
 	private String nes =
@@ -21,12 +26,12 @@ public class SubtreeBuilder {
 	        ")*" +				// end group 2
 		")";					// end group 1
 	
-	public SubtreeBuilder(Database db) {
-		this.db = db;
+	public SubtreeBuilder(int bagID) {
+		this.bagID = bagID;
 		// empty table
 		//db.anyQuery("TRUNCATE `subtree_path`;");
 		//System.out.println("Emptied table 'subtree_path'.");
-		System.out.println("Insert subtrees into the database...");
+		LOG.info("Insert subtrees into the database...");
 	}
 
 	/*
@@ -66,12 +71,15 @@ public class SubtreeBuilder {
 				re += n;
 		}
 		
-		System.out.println("\nInsert: " + path.toString() + ", Regexp: " + re);
+		LOG.info("\nInsert: " + path.toString() + ", Regexp: " + re);
+		
+//		System.out.println("\nInsert: " + path.toString() + ", Regexp: " + re);
 		
 		// get all relevant subtrees
 		ResultSet res = db.getSubtrees(re, re + n, path.get(path.size() - 1));
 		if (res == null)
-			System.out.println("ERROR on SELECT");
+			LOG.error("ERROR on SELECT");
+//			System.out.println("ERROR on SELECT");
 		else
 			try {
 				// for each relevant subtree
@@ -82,11 +90,13 @@ public class SubtreeBuilder {
 						endLvl++;
 					
 					// insert new subtree
-					boolean qry = db.saveSubtree( 0, endLvl, res.getString("NewPath")); // TODO real Crawl & Bag
+					boolean qry = db.saveSubtree( 0, endLvl, res.getString("NewPath"), bagID); // TODO real Crawl & Bag
 					if (!qry)
-						System.out.println("ERROR on Insert: " + res.getString("NewPath"));
+						LOG.error("ERROR on Insert: " + res.getString("NewPath"));
+//						System.out.println("ERROR on Insert: " + res.getString("NewPath"));
 					else
-						System.out.println("Selected: " + res.getString("Path") + " - Inserted: " + res.getString("NewPath"));
+						LOG.debug("Selected: " + res.getString("Path") + " - Inserted: " + res.getString("NewPath"));
+//						System.out.println("Selected: " + res.getString("Path") + " - Inserted: " + res.getString("NewPath"));
 					
 					// insert subtrees with 0 < StartLvl < EndLvl
 					// TODO
@@ -98,11 +108,13 @@ public class SubtreeBuilder {
 		// insert new subtree if path has only one element
 		if (path.size() == 1) {
 			String newPath = path.get(0) + "()";
-			boolean qry = db.saveSubtree( 0, 0, newPath); // TODO real Crawl & Bag
+			boolean qry = db.saveSubtree( 0, 0, newPath, bagID); // TODO real Crawl & Bag
 			if (!qry)
-				System.out.println("ERROR on Create: " + newPath);
+				LOG.error("ERROR on Create: " + newPath);
+//				System.out.println("ERROR on Create: " + newPath);
 			else
-				System.out.println("Created: " + newPath);
+				LOG.info("Created: " + newPath);
+//				System.out.println("Created: " + newPath);
 		}
 	}
 }

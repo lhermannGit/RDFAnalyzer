@@ -4,12 +4,17 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import treeGeneration.RootNode;
 import treeGeneration.ChildNode;
 import treeGeneration.Node;
 
 public class TreeTraversal {
 
+	Logger LOG = LogManager.getLogger(this.getClass().getName());
 	private Queue<Node> queueNodes;
 	private Queue<ArrayList<Integer>> queuePath;
 	private Queue<ArrayList<Integer>> queuePairs;
@@ -38,6 +43,7 @@ public class TreeTraversal {
 		if (queuePairs.isEmpty()){
 			while(true){
 				if (queueNodes.isEmpty()){
+					LOG.debug("returning null as next path");
 					return null;
 				}
 				children = queueNodes.remove().getChildren();
@@ -62,6 +68,9 @@ public class TreeTraversal {
 				break;
 			}
 		}
-		return queuePairs.remove();
+		
+		ArrayList<Integer> tmp = queuePairs.remove();
+		LOG.debug("next path: " + tmp);
+		return tmp;
 	}
 }
