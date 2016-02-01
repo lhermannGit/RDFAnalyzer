@@ -20,7 +20,7 @@ public class DBConnectionInfo {
 		Properties prop = new Properties();
 
 		try {
-			inputStream = new FileInputStream(new File("src/main/resources/config.properties"));
+			inputStream = new FileInputStream(new File("config.properties"));
 		} catch (FileNotFoundException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
