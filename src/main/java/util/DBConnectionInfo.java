@@ -19,8 +19,11 @@ public class DBConnectionInfo {
 	public DBConnectionInfo() {
 		Properties prop = new Properties();
 
+		/*
+		 * HARDCODED THE PROP FILE IN - FOR TEST REASONS
+		 */
 		try {
-			inputStream = new FileInputStream(new File("config.properties"));
+			inputStream = new FileInputStream(new File("/src/main/resources/config.properties"));
 		} catch (FileNotFoundException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
