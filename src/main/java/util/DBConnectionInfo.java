@@ -22,12 +22,7 @@ public class DBConnectionInfo {
 		/*
 		 * HARDCODED THE PROP FILE IN - FOR TEST REASONS
 		 */
-		try {
-			inputStream = new FileInputStream(new File("/src/main/resources/config.properties"));
-		} catch (FileNotFoundException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
+			inputStream = getClass().getResourceAsStream("/config.properties");
 
 		if (inputStream != null) {
 			try {
