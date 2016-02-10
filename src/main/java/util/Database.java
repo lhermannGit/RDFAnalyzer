@@ -37,6 +37,16 @@ public class Database {
 	private Connection connection;
 	private Statement stmt;
 	private int crawlid = 0;
+	private int bagid;
+	private class MyNode{
+	    Node node;
+	    int lvl;
+
+	    private MyNode(Node node,int lvl) {
+	        this.node = node;
+	        this.lvl = lvl;
+	    }
+	}
 
 	private Database(){
 		dbConfig = new DBConnectionInfo();
@@ -44,8 +54,7 @@ public class Database {
 			connection = DriverManager.getConnection(dbConfig.DB_URL, dbConfig.user, dbConfig.password);
 			stmt = connection.createStatement();
 
-			// create two tables (one with RDF triples another with graph
-			// structure)
+			// create 3 tables (one with RDF triples,one for paths and one for crawl's data)
 			this.createTables(dbConfig.subtrees);
 
 		} catch (SQLException e) {
@@ -55,12 +64,16 @@ public class Database {
 	}
 	
 	public void serialize(RootNode rootNode){
-		LinkedList<Node> queueNodes = new LinkedList<Node>();
+		
 		if (rootNode != null) {
-			queueNodes.add(rootNode);
-			// int lvl=0;
+			LinkedList<MyNode> queueNodes = new LinkedList<MyNode>();
+			int lvl=0;
 			int treeID;
-
+			int lastVisitedLvl=0;
+			MyNode currentnode;
+			LinkedList <Node> visited= new LinkedList <Node>();
+			queueNodes.add(new MyNode(rootNode,lvl));
+			bagid=rootNode.bagID;
 			try {
 				// fond the max id in the Table Tree and increment it in order
 				// to store new Tree
@@ -68,37 +81,43 @@ public class Database {
 				ResultSet res = this.stmt.executeQuery(query);
 				res.last();
 				treeID = res.getInt(1) + 1;
-
-				// Node parentnode=null;
-				Node currentnode;
-				LinkedList<Node> visited = new LinkedList<Node>();
+				
+				//save first line, root node
+				String SqlString="INSERT INTO Trees ( BagID, TreeID, Current, Lvl) VALUES( "+bagid+","+treeID+","+rootNode.getName()+","+lvl+");";
+				this.stmt.executeUpdate(SqlString);
+				
 
 				while (!queueNodes.isEmpty()) {
 					currentnode = queueNodes.getFirst();
-
-					List<ChildNode> children = queueNodes.remove().getChildren();
-
-					if (!visited.contains(currentnode))
-						if (children.size() != 0) {
-							for (int n = 0; n < children.size(); n++) {
-								if (!visited.contains(children.get(n))) {
-									queueNodes.add(children.get(n));
-								}
-								/// store to DB
+					
+					List<ChildNode> children = queueNodes.remove().node.getChildren();
+					int child_n=0;
+					
+					if (currentnode.lvl!=lastVisitedLvl){
+						lastVisitedLvl++;}
+					
+					if (!visited.contains(currentnode.node) )
+						{if (children.size()!=0)
+							{for (int n=0; n<children.size(); n++){
+						
+								if (!visited.contains(children.get(n)) )
+									{queueNodes.add(new MyNode(children.get(n),currentnode.lvl+1));}
+								///store to DB
 								try {
-
-									String SqlString = "INSERT INTO Trees (TreeID, BagID, Current, Predicate, Child_No) VALUES("
-											+ treeID + " ," + rootNode.bagID + "," + currentnode.getName() + ","
-											+ children.get(n).getPredicate() + "," + children.get(n).getName() + ");";
+									lvl=lastVisitedLvl+1;
+									SqlString="INSERT INTO Trees ( BagID, TreeID, Parent, Predicate, Current, Child_No, Lvl) VALUES("+
+											bagid+","+treeID+","+currentnode.node.getName()+","+children.get(n).getPredicate()+","+children.get(n).getName()+","+child_n+","+lvl+");";
 									this.stmt.executeUpdate(SqlString);
-								} catch (SQLException e) {
-									LOG.error("Cannot save current_node,predicate,child_node into Table Trees!!");
+									child_n++;
+									} 
+								catch (SQLException e) {
+									System.out.println("Cannot save current_node,predicate,child_node into Table Trees!!");
 									e.printStackTrace();
+									}	
 								}
 							}
-						}
-					visited.add(currentnode);
-
+						visited.add(currentnode.node);
+					}
 				}
 			} catch (SQLException e) {
 				e.printStackTrace();
@@ -131,8 +150,10 @@ public class Database {
 			LOG.info("No need to create table Crawls (already exists).");
 
 		if (!tableExists("Trees")) {
-			sqlString = "CREATE TABLE Trees " + " (Id INT NOT NULL AUTO_INCREMENT," + " TreeID INT NOT NULL,"
-					+ " BagID INT NULL," + " Current INT NOT NULL," + " Predicate INT NULL," + " Child_No INT NULL,"
+			sqlString="CREATE TABLE Trees (Id INT NOT NULL AUTO_INCREMENT,"
+					+ " TreeID INT NULL, BagID INT NULL,"
+					+ " Parent INT NULL, Predicate INT NULL, Current INT NOT NULL,"
+					+ " Child_No INT NULL, Lvl INT NOT NULL,"
 					+ " PRIMARY KEY (ID) );";
 			stmt.executeUpdate(sqlString);
 			LOG.info("Table Trees is created!");
