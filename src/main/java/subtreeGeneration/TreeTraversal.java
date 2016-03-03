@@ -69,7 +69,7 @@ public class TreeTraversal {
 			}
 		}
 		
-		ArrayList<Integer> tmp = queuePairs.remove();
+		ArrayList<Integer> tmp = new ArrayList<Integer>(queuePairs.remove());
 		LOG.debug("next path: " + tmp);
 		return tmp;
 	}
